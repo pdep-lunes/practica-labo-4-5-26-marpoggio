@@ -4,49 +4,63 @@ import Text.Show.Functions()
 doble :: Int -> Int
 doble = (*2)
 
-data Perrito = unPerrito{
-    raza :: String
-    jugueteFavorito :: [String]
-    tiempoPermanencia :: Int
+data Perrito = UnPerrito{
+    raza :: String,
+    jugueteFavorito :: [String],
+    tiempoPermanencia :: Int,
     energia :: Int
 } deriving Show
 
-data Guarderia = unaGuarderia {
-    nombre :: String
-    type rutina = [(nombre, duracion)]
+type Ejercicio = Perrito -> Perrito --los ejercicios terminan siendo funciones que reciben unPerrito y tambien devuelven unPerrito
+type Duracion = Int
+type Rutina = [(Ejercicio, Duracion)]
+data Guarderia = UnaGuarderia {
+    nombre :: String,
+    rutina :: Rutina
 } deriving Show
 
-energiaNegativa :: Perrito -> Bool
-energiaNegativa unPerrito = energia unPerrito > 0
-jugar :: Bool -> Perrito -> Int
-jugar energiaNegativa unPerrito = unPerrito {energia = (energia - 10)}
+cambioEnergia :: Int -> Perrito -> Perrito
+cambioEnergia nueva unPerrito = unPerrito {energia = nueva}
+cambioJuguetes :: ([String]-> [String]) -> Perrito -> Perrito
+cambioJuguetes cambio unPerrito= unPerrito {jugueteFavorito = cambio (jugueteFavorito unPerrito)}
 
-ladrar :: Perrito -> Int -> Int
-ladrar unPerrito ladridos = unPerrito {energia = (energia + (ladridos/2))}
+jugar :: Perrito -> Perrito --si es <0, que se quede en 0 -> max? -> si valor negativo entonces elige 0 (porque 0 va a ser mas grande)
+jugar unPerrito = cambioEnergia (max 0 (energia unPerrito - 10)) unPerrito
 
-regalar :: Perrito -> String -> Perrito
-regalar unPerrito juguete = juguete : jugueteFavorito unPerrito  --añadirle juguete especificado a lista ultimo
+ladrar :: Int-> Perrito -> Perrito
+ladrar ladridos unPerrito = cambioEnergia (energia unPerrito + (div ladridos 2)) unPerrito
+
+regalar :: String -> Perrito -> Perrito --agregar regalo a lista juguetes favoritos -> :
+regalar juguete unPerrito = cambioJuguetes (juguete :) unPerrito
 
 razaExtravagante :: Perrito -> Bool
-razaExtravagante unPerrito = raza unPerrito == dalmata || unPerrito == pomerania
+razaExtravagante unPerrito = raza unPerrito == "dalmata" || raza unPerrito == "pomerania"
 permanenciaMayor :: Perrito -> Bool
 permanenciaMayor unPerrito = tiempoPermanencia unPerrito > 50
 spaEvaluar :: Perrito -> Bool
 spaEvaluar unPerrito = razaExtravagante unPerrito || permanenciaMayor unPerrito
-spaSumarRegalar :: Perrito -> Int -> String
-spaSumarRegalar unPerrito = spaSumarEnergia unPerrito{energia = 100, regalar "peine de goma"} --composicion con regalar
+diaDeSpa :: Perrito -> Perrito -- si x e y entonces hacer z -> guarda
+diaDeSpa unPerrito
+    | spaEvaluar unPerrito = (regalar "peine de goma" . cambioEnergia 100) unPerrito
+    | otherwise = unPerrito
 
-diaDeCampo :: Perrito -> Int -> [a] -> [a]
-diaDeCampo unPerrito = jugueteFavorito = drop 1 jugueteFavorito unPerrito --perder 1er juguete en lista drop
-
-
+diaDeCampo :: Perrito -> Perrito
+diaDeCampo unPerrito = cambioJuguetes (drop 1) unPerrito
 
 zara :: Perrito
-zara = un Perrito "dalamata", [pelota, mantita], 90, 80
+zara = UnPerrito "dalmata" ["pelota", "mantita"] 90 80
 guarderia :: Guarderia
-guarderia = unaGuarderia "guarderiaPdePerritos" [(jugar, 30), (ladrar18, 20), (regalarPelota, 0), (diaDeSpa, 120), (diaDeCampo, 720)])
+guarderia = UnaGuarderia "GuarderiaPdePerritos" 
+            [(jugar, 30), 
+            (ladrar 18, 20), 
+            (regalar "pelota", 0), 
+            (diaDeSpa, 120), 
+            (diaDeCampo, 720)]
 
-tiempoRutina::
-tiempoRutina unaGuarderia = sum map 
-perroAdmitido:: Perrito -> Bool
-perroAdmitido unPerrito = 
+tiempoRutina:: Guarderia -> Int
+tiempoRutina unaGuarderia = sum (map snd (rutina unaGuarderia))
+perroAdmitido:: Perrito -> Guarderia -> Bool
+perroAdmitido unPerrito unaGuarderia= tiempoPermanencia unPerrito > tiempoRutina unaGuarderia
+
+perroResponsable:: Perrito -> Bool
+perroResponsable unPerrito = length (jugueteFavorito (diaDeCampo unPerrito)) > 3
